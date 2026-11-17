@@ -1,0 +1,64 @@
+name: rbb-w
+on:
+  workflow_dispatch:
+    inputs:
+      wmin:
+        description: 'fewest marked words'
+        default: '2'
+      wmax:
+        description: 'most marked words'
+        default: '4'
+      amin:
+        description: 'first-index low bound'
+        default: '0'
+      amax:
+        description: 'first-index high bound'
+        default: '999'
+      seconds:
+        description: 'per-process time budget'
+        default: '19000'
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        shard: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        run: gcc -O3 -march=x86-64-v2 -o md5w rbb/md5w.c
+      - name: sweep shard ${{ matrix.shard }}
+        env:
+          WMIN: ${{ inputs.wmin }}
+          WMAX: ${{ inputs.wmax }}
+          AMIN: ${{ inputs.amin }}
+          AMAX: ${{ inputs.amax }}
+          SECS: ${{ inputs.seconds }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          for W in $(seq $WMIN $WMAX); do
+            for i in 0 1 2 3; do
+              S=$(( SHARD * 4 + i ))
+              ./md5w rbb/demo_base.txt $W 0 "$SECS" "w${W}_hits_${S}.txt" "w${W}_state_${S}.txt" 80 $S "$AMIN" "$AMAX" > "wlog_${W}_${S}.txt" 2>&1 &
+            done
+            wait
+            grep -h '^done' wlog_${W}_*.txt | head -2
+          done
+      - name: check prefix hits against the escrow
+        run: |
+          for W in $(seq ${{ inputs.wmin }} ${{ inputs.wmax }}); do
+            cat w${W}_hits_*.txt > "allhits_${W}.txt" 2>/dev/null || true
+            echo "w=$W distinct-prefix-hits: $(sort -u allhits_${W}.txt | wc -l)"
+            python3 rbb/check.py "allhits_${W}.txt" | tail -2
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: w-hits-${{ matrix.shard }}
+          path: |
+            allhits_*.txt
+            w*_state_*.txt
+          retention-days: 14
