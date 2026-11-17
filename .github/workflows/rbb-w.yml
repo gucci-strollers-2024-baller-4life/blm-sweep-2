@@ -49,6 +49,7 @@ jobs:
           done
       - name: check prefix hits against the escrow
         run: |
+          pip install --quiet coincurve
           for W in $(seq ${{ inputs.wmin }} ${{ inputs.wmax }}); do
             cat w${W}_hits_*.txt > "allhits_${W}.txt" 2>/dev/null || true
             echo "w=$W distinct-prefix-hits: $(sort -u allhits_${W}.txt | wc -l)"

@@ -40,6 +40,7 @@ jobs:
           grep -h '^done\|^stop' log_*.txt | head -4
       - name: check prefix hits against the escrow
         run: |
+          pip install --quiet coincurve
           cat hits_*.txt > allhits.txt 2>/dev/null || true
           wc -l allhits.txt
           python3 rbb/check.py allhits.txt | tail -3
