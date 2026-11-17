@@ -49,8 +49,9 @@ t0=time.time(); n=0; seen=set()
 with open(hitsf) as f:
     for line in f:
         parts=line.split()
-        if len(parts)!=5: continue
-        h=parts[4]
+        if len(parts)<2: continue
+        h=parts[-1]
+        if len(h)!=32: continue
         if h in seen: continue
         seen.add(h); n+=1
         r=derive(bytes.fromhex(h))
