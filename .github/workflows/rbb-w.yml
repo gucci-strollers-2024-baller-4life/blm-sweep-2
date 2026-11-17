@@ -2,6 +2,9 @@ name: rbb-w
 on:
   workflow_dispatch:
     inputs:
+      loose:
+        description: '1 = accept any 3cX digest (author mistyped the third digit)'
+        default: '0'
       wmin:
         description: 'fewest marked words'
         default: '2'
@@ -41,6 +44,7 @@ jobs:
           AMAX: ${{ inputs.amax }}
           SECS: ${{ inputs.seconds }}
           SHARD: ${{ matrix.shard }}
+          LOOSE_PFX: ${{ inputs.loose }}
         run: |
           for W in $(seq $WMIN $WMAX); do
             for i in 0 1 2 3; do

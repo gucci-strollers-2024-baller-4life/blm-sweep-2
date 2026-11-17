@@ -55,12 +55,14 @@ static void md5_buf(const unsigned char*buf,size_t len,unsigned char out[16]){
 }
 static void hex(const unsigned char*d,char*o){for(int i=0;i<16;i++)sprintf(o+i*2,"%02x",d[i]);}
 
+int LOOSE=0;
 int main(int argc,char**argv){
   /* usage: md5w <base> <w> <start> <max_seconds> <hits> <state> <mod> <shard> */
   const char*bf=argv[1]; int W=atoi(argv[2]); long long start=atoll(argv[3]);
   double maxt=atof(argv[4]); const char*hitsf=argv[5]; const char*statef=argv[6];
   long long mod=(argc>7)?atoll(argv[7]):1, shard=(argc>8)?atoll(argv[8]):0;
   int amin=(argc>9)?atoi(argv[9]):0, amax=(argc>10)?atoi(argv[10]):1<<30;
+  { const char*e=getenv("LOOSE_PFX"); if(e&&e[0]=='1') LOOSE=1; }
   FILE*f=fopen(bf,"rb"); if(!f){perror("base");return 1;}
   static unsigned char base[8192]; size_t len=fread(base,1,8192,f); fclose(f);
   unsigned char chk[16]; char chx[40]; md5_buf(base,len,chk); hex(chk,chx);
@@ -86,7 +88,7 @@ int main(int argc,char**argv){
         if(wl[w]!=wf[w]) work[wl[w]] = (unsigned char)toupper(base[wl[w]]); }
       unsigned char dig[16]; md5_buf(work,len,dig);
       for(int i=0;i<W;i++){ work[wf[idx[i]]]=base[wf[idx[i]]]; work[wl[idx[i]]]=base[wl[idx[i]]]; }
-      if(dig[0]==0x3c && ((dig[1]>>4)==0x6)){ char h[40]; hex(dig,h); pref++;
+      if(dig[0]==0x3c && (LOOSE || ((dig[1]>>4)==0x6))){ char h[40]; hex(dig,h); pref++;
         fprintf(hf,"%d",idx[0]); for(int i=1;i<W;i++) fprintf(hf," %d",idx[i]);
         fprintf(hf," %s\n",h); fflush(hf); }
     }

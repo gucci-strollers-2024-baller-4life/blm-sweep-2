@@ -2,6 +2,9 @@ name: rbb-k
 on:
   workflow_dispatch:
     inputs:
+      loose:
+        description: '1 = accept any 3cX digest (author mistyped the third digit)'
+        default: '0'
       k:
         description: 'marks per text'
         default: '4'
@@ -33,6 +36,7 @@ jobs:
           SECS: ${{ inputs.seconds }}
           PROCS: ${{ inputs.procs }}
           SHARD: ${{ matrix.shard }}
+          LOOSE_PFX: ${{ inputs.loose }}
         run: |
           MOD=$(( 20 * PROCS ))
           for i in $(seq 0 $((PROCS-1))); do
