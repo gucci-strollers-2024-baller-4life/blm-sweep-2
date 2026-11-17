@@ -1,7 +1,7 @@
 import sys, hashlib, hmac, struct, time, os
 from coincurve import PrivateKey
 
-WL = [w.strip() for w in open(os.environ.get('WL','bip39.txt'))]
+WL = [w.strip() for w in open(os.environ.get('WL', os.path.join(os.path.dirname(os.path.abspath(__file__)),'bip39_english.txt')))]
 N  = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 A58="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 ESC="1tzieUfbeQghz2zjDeGHcAEfzCRgX6eLi"

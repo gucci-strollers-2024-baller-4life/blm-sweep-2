@@ -1,0 +1,44 @@
+name: rbb-verify
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'sweep run id whose artifacts to check'
+        required: true
+      prefix:
+        description: 'artifact name prefix (w-hits or hits)'
+        default: 'w-hits'
+      hitsfile:
+        description: 'glob inside the artifact'
+        default: 'allhits_*.txt'
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        shard: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: fetch artifact and derive every prefix hit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN: ${{ inputs.run_id }}
+          PREFIX: ${{ inputs.prefix }}
+          SHARD: ${{ matrix.shard }}
+          HITSFILE: ${{ inputs.hitsfile }}
+        run: |
+          pip install --quiet "coincurve<21"
+          AID=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN/artifacts" --paginate \
+                --jq ".artifacts[] | select(.name==\"${PREFIX}-${SHARD}\") | .id")
+          echo "artifact id: $AID"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$AID/zip" > a.zip
+          unzip -o -q a.zip -d art
+          cat art/${HITSFILE} > all.txt
+          wc -l all.txt
+          python3 rbb/check.py all.txt
