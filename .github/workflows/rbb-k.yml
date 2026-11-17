@@ -1,0 +1,54 @@
+name: rbb-k
+on:
+  workflow_dispatch:
+    inputs:
+      k:
+        description: 'marks per text'
+        default: '4'
+      seconds:
+        description: 'per-process time budget'
+        default: '20000'
+      procs:
+        description: 'processes per runner'
+        default: '4'
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        shard: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        run: gcc -O3 -march=x86-64-v2 -o md5scan rbb/md5scan.c && ./md5scan rbb/demo_base.txt 1 0 0 /dev/null /dev/null 2>&1 | head -1
+      - name: sweep shard ${{ matrix.shard }}
+        env:
+          K: ${{ inputs.k }}
+          SECS: ${{ inputs.seconds }}
+          PROCS: ${{ inputs.procs }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          MOD=$(( 20 * PROCS ))
+          for i in $(seq 0 $((PROCS-1))); do
+            S=$(( SHARD * PROCS + i ))
+            ./md5scan rbb/demo_base.txt "$K" 0 "$SECS" "hits_$S.txt" "state_$S.txt" $MOD $S > "log_$S.txt" 2>&1 &
+          done
+          wait
+          grep -h '^done\|^stop' log_*.txt | head -4
+      - name: check prefix hits against the escrow
+        run: |
+          cat hits_*.txt > allhits.txt 2>/dev/null || true
+          wc -l allhits.txt
+          python3 rbb/check.py allhits.txt | tail -3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hits-${{ matrix.shard }}
+          path: |
+            allhits.txt
+            state_*.txt
+            log_*.txt
+          retention-days: 14
