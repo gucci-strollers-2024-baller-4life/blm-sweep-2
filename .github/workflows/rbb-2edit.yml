@@ -1,0 +1,50 @@
+name: rbb-2edit
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: 'base file under rbb/'
+        default: 'rbb/base_itasm_crlf2.txt'
+      aset:
+        description: 'narrow (6 artifacts + case) or wide (95 printable)'
+        default: 'narrow'
+      seconds:
+        description: 'per-process budget'
+        default: '19000'
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        shard: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: deps
+        run: pip install --quiet "coincurve<21"
+      - name: two-edit shard ${{ matrix.shard }}
+        env:
+          BASE: ${{ inputs.base }}
+          ASET: ${{ inputs.aset }}
+          SECS: ${{ inputs.seconds }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          for i in 0 1 2 3; do
+            S=$(( SHARD * 4 + i ))
+            python3 -u rbb/rbb2edit.py "$BASE" "$ASET" 80 $S "$SECS" > "l_$S.txt" 2>&1 &
+          done
+          wait
+          grep -h "MATCH\|done\|stop" l_*.txt | head -8
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: twedit-${{ matrix.shard }}
+          path: |
+            l_*.txt
+            MATCH_RBB.txt
+          retention-days: 14
