@@ -15,16 +15,18 @@ static const int S[64]={7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,
 6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21};
 #define ROT(x,c) (((x)<<(c))|((x)>>(32-(c))))
 static inline void md5block(uint32_t st[4], const uint8_t*p){
-  uint32_t M[16];
-  for(int i=0;i<16;i++) M[i]=(uint32_t)p[4*i]|((uint32_t)p[4*i+1]<<8)|((uint32_t)p[4*i+2]<<16)|((uint32_t)p[4*i+3]<<24);
+  uint32_t M[16]; memcpy(M,p,64);
   uint32_t a=st[0],b=st[1],c=st[2],d=st[3];
   for(int i=0;i<64;i++){
-    uint32_t f; int g;
-    if(i<16){f=(b&c)|(~b&d);g=i;}
-    else if(i<32){f=(d&b)|(~d&c);g=(5*i+1)&15;}
-    else if(i<48){f=b^c^d;g=(3*i+5)&15;}
-    else{f=c^(b|~d);g=(7*i)&15;}
-    uint32_t t=d; d=c; c=b; b=b+ROT(a+f+K[i]+M[g],S[i]); a=t;
+    uint32_t f,g;
+    if(i<16){ f=(b&c)|(~b&d); g=i; }
+    else if(i<32){ f=(d&b)|(~d&c); g=(5*i+1)&15; }
+    else if(i<48){ f=b^c^d; g=(3*i+5)&15; }
+    else { f=c^(b|~d); g=(7*i)&15; }
+    uint32_t tmp=d; d=c; c=b;
+    uint32_t x=a+f+K[i]+M[g];
+    b=b+((x<<S[i])|(x>>(32-S[i])));
+    a=tmp;
   }
   st[0]+=a; st[1]+=b; st[2]+=c; st[3]+=d;
 }
