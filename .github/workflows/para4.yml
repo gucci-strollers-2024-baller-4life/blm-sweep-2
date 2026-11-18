@@ -1,0 +1,36 @@
+name: para4
+on:
+  workflow_dispatch:
+    inputs:
+      mod: {description: 'shards', default: '40'}
+      secs: {description: 'per-shard seconds', default: '19500'}
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        shard: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: deps
+        run: pip install --quiet "coincurve<21"
+      - name: sweep shard ${{ matrix.shard }}
+        env:
+          MOD: ${{ inputs.mod }}
+          SECS: ${{ inputs.secs }}
+          SHARD: ${{ matrix.shard }}
+          STATE: state4_${{ matrix.shard }}.json
+        run: python3 rbb/scan4.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: para4-${{ matrix.shard }}
+          path: |
+            MATCH4.txt
+            state4_*.json
+          if-no-files-found: ignore
